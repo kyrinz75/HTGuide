@@ -55,3 +55,4 @@ build/
 
 # OS
 .DS_Store
+data/raw/.download_log.json

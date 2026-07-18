@@ -1,3 +1,4 @@
+import json
 import os
 import re
 from pathlib import Path
@@ -27,9 +28,20 @@ CONTENT_TYPE_MAP = {
 
 AMBIGUOUS_TYPES = {"application/force-download", "application/octet-stream"}
 
+DOWNLOAD_LOG_PATH = DATA_RAW_DIR / ".download_log.json"
+
+
+def load_download_log() -> dict:
+    if DOWNLOAD_LOG_PATH.exists():
+        return json.loads(DOWNLOAD_LOG_PATH.read_text(encoding="utf-8"))
+    return {}
+
+
+def save_download_log(log: dict) -> None:
+    DOWNLOAD_LOG_PATH.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
+
 
 def guess_extension_from_disposition(res: requests.Response) -> str | None:
-    """Khi Content-Type không rõ ràng, thử đoán đuôi file từ Content-Disposition header."""
     disposition = res.headers.get("Content-Disposition", "")
     match = re.search(r'filename="?([^";]+)"?', disposition)
     if match:
@@ -39,14 +51,21 @@ def guess_extension_from_disposition(res: requests.Response) -> str | None:
                 return ext
     return None
 
+
 def safe_filename(name: str, fallback: str) -> str:
-    """Loại bỏ ký tự không hợp lệ cho tên file, dùng fallback nếu tên rỗng."""
     name = name.strip() or fallback
     name = re.sub(r'[\\/*?:"<>|]', "_", name)
     return name[:200]
-def download_file(item: dict) -> dict | None:
+
+
+def download_file(item: dict, download_log: dict) -> dict | None:
     url = item["url"]
     filename_hint = item["filename"]
+
+    if url in download_log and Path(download_log[url]).exists():
+        target_path = Path(download_log[url])
+        logger.info(f"Đã tải trước đó, bỏ qua: {target_path.name}")
+        return {"filename": target_path.name, "url": url, "path": str(target_path)}
 
     try:
         res = requests.get(url, headers=HEADERS, stream=True, timeout=20)
@@ -60,12 +79,11 @@ def download_file(item: dict) -> dict | None:
     if content_type in CONTENT_TYPE_MAP:
         ext, target_dir = CONTENT_TYPE_MAP[content_type]
     elif content_type in AMBIGUOUS_TYPES:
-        # Content-Type không rõ ràng -> thử đoán qua Content-Disposition hoặc mặc định coi là PDF
         guessed_ext = guess_extension_from_disposition(res)
         if guessed_ext in (".docx", ".doc"):
             ext, target_dir = guessed_ext, DOCX_DIR
         else:
-            ext, target_dir = ".pdf", DATA_RAW_DIR  # mặc định coi là PDF vì đa số văn bản trường là PDF
+            ext, target_dir = ".pdf", DATA_RAW_DIR
         logger.info(f"Content-Type mơ hồ ({content_type}) cho {url}, đoán là {ext}")
     else:
         logger.warning(f"Bỏ qua {url} — Content-Type không hợp lệ: {content_type}")
@@ -88,15 +106,20 @@ def download_file(item: dict) -> dict | None:
             f.write(chunk)
 
     logger.info(f"Đã tải: {target_path.name}")
+    download_log[url] = str(target_path)
     return {"filename": target_path.name, "url": url, "path": str(target_path)}
 
+
 def run_downloader(found_files: list[dict]) -> list[dict]:
+    download_log = load_download_log()
     downloaded = []
+
     for item in tqdm(found_files, desc="Đang tải file"):
-        result = download_file(item)
+        result = download_file(item, download_log)
         if result:
             downloaded.append(result)
 
+    save_download_log(download_log)
     logger.info(f"Hoàn tất tải. Thành công: {len(downloaded)}/{len(found_files)}")
     return downloaded
 
