@@ -9,6 +9,7 @@ __pycache__/
 *.pyc
 *.pyo
 
+<<<<<<< HEAD
 # Data - ignore all PDF/DOCX content, keep folder structure via .gitkeep
 data/raw/*
 !data/raw/.gitkeep
@@ -20,6 +21,13 @@ data/raw/pdf_text/*
 data/raw/pdf_scanned/*
 !data/raw/pdf_scanned/.gitkeep
 data/raw/docx/*
+=======
+# Data (raw/interim/processed thường không nên commit, chỉ giữ cấu trúc thư mục)
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/pdf_text/.gitkeep
+!data/raw/pdf_scanned/.gitkeep
+>>>>>>> develop
 !data/raw/docx/.gitkeep
 
 data/interim/*
@@ -28,11 +36,14 @@ data/interim/*
 data/processed/*
 !data/processed/.gitkeep
 
+<<<<<<< HEAD
 # Extra safety: ignore PDF/DOCX anywhere in the project
 *.pdf
 *.docx
 *.doc
 
+=======
+>>>>>>> develop
 # Build artifacts
 *.egg-info/
 dist/
