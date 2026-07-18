@@ -1,0 +1,46 @@
+# Virtual environment
+.venv/
+
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Data - ignore all PDF/DOCX content, keep folder structure via .gitkeep
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/pdf_text/
+!data/raw/pdf_scanned/
+!data/raw/docx/
+data/raw/pdf_text/*
+!data/raw/pdf_text/.gitkeep
+data/raw/pdf_scanned/*
+!data/raw/pdf_scanned/.gitkeep
+data/raw/docx/*
+!data/raw/docx/.gitkeep
+
+data/interim/*
+!data/interim/.gitkeep
+
+data/processed/*
+!data/processed/.gitkeep
+
+# Extra safety: ignore PDF/DOCX anywhere in the project
+*.pdf
+*.docx
+*.doc
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
