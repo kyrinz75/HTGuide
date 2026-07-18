@@ -28,7 +28,6 @@ CONTENT_TYPE_MAP = {
 
 AMBIGUOUS_TYPES = {"application/force-download", "application/octet-stream"}
 
-# File ghi lại url -> đường dẫn đã tải, để phân biệt "đã tải trước" vs "trùng tên tình cờ"
 DOWNLOAD_LOG_PATH = DATA_RAW_DIR / ".download_log.json"
 
 
@@ -63,7 +62,6 @@ def download_file(item: dict, download_log: dict) -> dict | None:
     url = item["url"]
     filename_hint = item["filename"]
 
-    # Đã tải chính URL này trước đó (kể cả lần chạy trước) -> bỏ qua thật
     if url in download_log and Path(download_log[url]).exists():
         target_path = Path(download_log[url])
         logger.info(f"Đã tải trước đó, bỏ qua: {target_path.name}")
@@ -97,7 +95,6 @@ def download_file(item: dict, download_log: dict) -> dict | None:
 
     target_path = target_dir / base_name
 
-    # Tên trùng nhưng URL khác (tài liệu khác nhau, trùng tên tình cờ) -> thêm hậu tố
     counter = 1
     while target_path.exists():
         stem = Path(base_name).stem
