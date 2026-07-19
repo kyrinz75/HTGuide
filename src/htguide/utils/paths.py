@@ -7,6 +7,8 @@ DATA_RAW_DIR = DATA_DIR / "raw"
 DATA_INTERIM_DIR = DATA_DIR / "interim"
 DATA_PROCESSED_DIR = DATA_DIR / "processed"
 
+CHROMA_DIR = ROOT_DIR / "data" / "chroma"
+CHROMA_DIR.mkdir(parents=True, exist_ok=True)
 PDF_TEXT_DIR = DATA_RAW_DIR / "pdf_text"
 PDF_SCANNED_DIR = DATA_RAW_DIR / "pdf_scanned"
 DOCX_DIR = DATA_RAW_DIR / "docx"
