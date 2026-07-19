@@ -75,13 +75,11 @@ def crawl(url: str, visited: set, found_files: list, depth: int = 0) -> None:
         if not is_internal(full_url):
             continue
 
-        # Kiểm tra file TRƯỚC — vì link file nằm ở /download/..., ngoài phạm vi /daotao
         if is_file_link(full_url, text):
             found_files.append({"filename": text or full_url.split("/")[-1], "url": full_url})
             logger.info(f"Tìm thấy file (candidate): {text}")
             continue
 
-        # Chỉ áp dụng is_in_scope cho các link KHÔNG phải file (để quyết định có crawl tiếp không)
         if not is_in_scope(full_url):
             continue
 
