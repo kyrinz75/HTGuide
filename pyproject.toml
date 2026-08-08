@@ -8,13 +8,15 @@ readme = "README.md"
 dependencies = [
     "requests>=2.32.0",
     "beautifulsoup4>=4.12.0",
-    "lxml>=5.2.0",          # parser nhanh hơn html.parser mặc định của bs4
-    "python-dotenv>=1.0.0", # quản lý config (base URL, headers, v.v.) qua .env
-    "tqdm>=4.66.0",         # progress bar khi tải nhiều file PDF
-    "PyMuPDF>=1.24.0",      # detect PDF text-based vs scanned (dùng ngay ở bước phân loại)
+    "lxml>=5.2.0",
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.66.0",
+    "PyMuPDF>=1.24.0",
     "python-docx>=1.1.0",
     "easyocr>=1.7.0",
     "pillow>=10.0.0",
+    "chromadb>=0.5.0",
+    "ollama>=0.3.0",
 ]
 
 [project.optional-dependencies]

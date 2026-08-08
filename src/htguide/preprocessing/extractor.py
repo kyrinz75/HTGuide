@@ -7,20 +7,7 @@ from htguide.utils.paths import DATA_INTERIM_DIR, PDF_TEXT_DIR
 
 logger = get_logger(__name__)
 
-RENDER_DPI = 300
-
 LEGACY_FONT_PATTERN = re.compile(r"(?i)\.vn|vni-|vni_")
-
-_reader = None
-
-
-def get_ocr_reader():
-    global _reader
-    if _reader is None:
-        import easyocr
-        logger.info("Khởi tạo EasyOCR reader (lần đầu, có thể mất chút thời gian)...")
-        _reader = easyocr.Reader(["vi", "en"], gpu=False)
-    return _reader
 
 
 def page_has_legacy_font(page) -> bool:
@@ -28,44 +15,54 @@ def page_has_legacy_font(page) -> bool:
     return any(LEGACY_FONT_PATTERN.search(f[3]) for f in fonts)
 
 
-def ocr_page(page) -> str:
-    zoom = RENDER_DPI / 72
-    matrix = fitz.Matrix(zoom, zoom)
-    pix = page.get_pixmap(matrix=matrix)
-    img_bytes = pix.tobytes("png")
-
-    reader = get_ocr_reader()
-    result = reader.readtext(img_bytes, detail=0, paragraph=True)
-    return "\n".join(result)
-
-
-def extract_text_from_pdf(pdf_path) -> tuple[str, int]:
+def file_has_legacy_font(pdf_path) -> bool:
     doc = fitz.open(pdf_path)
-    pages_text = []
-    ocr_page_count = 0
-
-    for i, page in enumerate(doc):
-        if page_has_legacy_font(page):
-            logger.info(f"  Trang {i + 1}: font legacy phát hiện -> OCR")
-            text = ocr_page(page)
-            ocr_page_count += 1
-        else:
-            text = page.get_text()
-        pages_text.append(text)
-
+    result = any(page_has_legacy_font(page) for page in doc)
     doc.close()
-    return "\n\n".join(pages_text), ocr_page_count
+    return result
+
+
+def extract_text_direct(pdf_path) -> str:
+    """Trích text trực tiếp, không OCR — dùng cho file không có font lỗi."""
+    doc = fitz.open(pdf_path)
+    pages_text = [page.get_text() for page in doc]
+    doc.close()
+    return "\n\n".join(pages_text)
 
 
 def run_extractor() -> dict:
+    """
+    Chỉ xử lý file KHÔNG có font lỗi (trích trực tiếp, nhanh).
+    File có font lỗi bị bỏ qua nếu đã có sẵn .txt (từ Colab); nếu chưa có, báo cần xử lý riêng.
+    """
     pdf_files = sorted(PDF_TEXT_DIR.glob("*.pdf"))
-    success, failed, files_with_ocr = 0, 0, 0
+    success, failed, skipped_existing, needs_ocr = 0, 0, 0, 0
+    legacy_files_missing = []
 
     for pdf_path in pdf_files:
+        output_path = DATA_INTERIM_DIR / f"{pdf_path.stem}.txt"
+
         try:
-            text, ocr_count = extract_text_from_pdf(pdf_path)
+            has_legacy = file_has_legacy_font(pdf_path)
         except Exception as e:
-            logger.warning(f"Không trích được text từ {pdf_path.name}: {e}")
+            logger.warning(f"Không kiểm tra được font {pdf_path.name}: {e}")
+            failed += 1
+            continue
+
+        if has_legacy:
+            if output_path.exists():
+                logger.info(f"[BỎ QUA - đã có sẵn .txt] {pdf_path.name}")
+                skipped_existing += 1
+            else:
+                logger.warning(f"[CẦN OCR RIÊNG - chưa có .txt] {pdf_path.name}")
+                legacy_files_missing.append(pdf_path.name)
+                needs_ocr += 1
+            continue
+
+        try:
+            text = extract_text_direct(pdf_path)
+        except Exception as e:
+            logger.warning(f"Lỗi trích {pdf_path.name}: {e}")
             failed += 1
             continue
 
@@ -74,20 +71,25 @@ def run_extractor() -> dict:
             failed += 1
             continue
 
-        if ocr_count > 0:
-            files_with_ocr += 1
-            logger.info(f"{pdf_path.name}: {ocr_count} trang được OCR do font legacy")
-
-        output_path = DATA_INTERIM_DIR / f"{pdf_path.stem}.txt"
         output_path.write_text(text, encoding="utf-8")
-        logger.info(f"Đã trích: {pdf_path.name} -> {output_path.name}")
+        logger.info(f"Đã trích: {pdf_path.name}")
         success += 1
 
     logger.info(
-        f"Hoàn tất trích text. Thành công: {success}/{len(pdf_files)}, Lỗi: {failed}, "
-        f"File có trang cần OCR: {files_with_ocr}"
+        f"Hoàn tất. Thành công: {success}, Lỗi: {failed}, "
+        f"Bỏ qua (đã có sẵn): {skipped_existing}, Cần OCR riêng: {needs_ocr}"
     )
-    return {"success": success, "failed": failed, "total": len(pdf_files), "files_with_ocr": files_with_ocr}
+    if legacy_files_missing:
+        logger.warning("Các file sau CHƯA có .txt, cần OCR (Colab hoặc chạy OCR CPU riêng):")
+        for f in legacy_files_missing:
+            logger.warning(f"  - {f}")
+
+    return {
+        "success": success,
+        "failed": failed,
+        "skipped_existing": skipped_existing,
+        "needs_ocr": needs_ocr,
+    }
 
 
 if __name__ == "__main__":
