@@ -13,3 +13,5 @@ DOCX_DIR = DATA_RAW_DIR / "docx"
 
 for d in [PDF_TEXT_DIR, PDF_SCANNED_DIR, DOCX_DIR, DATA_INTERIM_DIR, DATA_PROCESSED_DIR]:
     d.mkdir(parents=True, exist_ok=True)
+CHROMA_DIR = ROOT_DIR / "data" / "chroma"
+CHROMA_DIR.mkdir(parents=True, exist_ok=True)
